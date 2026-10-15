@@ -1,8 +1,8 @@
 <script lang="ts">
   import { euros } from '../core/dinero';
-  import { borradorMensual, calcular, fechaDevengo, plazoExpedicion } from '../core/factura';
+  import { borradorMensual, calcular, fechaDevengo, mesesPendientes, plazoExpedicion } from '../core/factura';
   import {
-    capitalizar, corta, diasEntre, hoy, inicioMes, mesAnterior, mesDe, MESES, nombreMes, plazo303, etiquetaTrimestre,
+    capitalizar, corta, diasEntre, hoy, inicioMes, mesDe, nombreMes, partes, plazo303, etiquetaTrimestre,
     trimestreAPresentar, type Mes,
   } from '../core/fechas';
   import { liquidacion303 } from '../core/impuestos';
@@ -16,14 +16,15 @@
   const vigentes = $derived(d.facturas.filter((f) => f.serie === 'F' && !f.rectificadaPor));
   const facturado = (m: Mes) => vigentes.find((f) => f.periodo.desde === inicioMes(m));
   const mesActual = mesDe(h);
-  const anterior = mesAnterior(mesActual);
   const facturaActual = $derived(facturado(mesActual));
-  // Solo avisa si ya se usaba la app antes de ese mes (las facturas previas pudieron hacerse en otro sitio).
-  const faltaAnterior = $derived(
-    vigentes.some((f) => f.periodo.desde < inicioMes(anterior)) && !facturado(anterior),
-  );
-  const estimado = $derived(d.contrato ? calcular(borradorMensual(d.contrato, mesActual, h).lineas, d.contrato.tipoIVA,
+  // Meses sin factura desde el inicio del contrato; se facturan en orden, empezando por el más antiguo.
+  const pendientes = $derived(mesesPendientes(d, mesActual));
+  const siguiente = $derived(pendientes[0]);
+  const diaFactura = $derived(d.contrato?.diaFacturacion ?? 1);
+  const estimado = $derived(d.contrato && siguiente ? calcular(borradorMensual(d.contrato, siguiente, h).lineas, d.contrato.tipoIVA,
     d.contrato.aplicaRetencion ? d.contrato.tipoRetencion : 0) : null);
+  const esMesActual = $derived(!!siguiente && inicioMes(siguiente) === inicioMes(mesActual));
+  const antesDelDia = $derived(esMesActual && partes(h).dia < diaFactura);
 
   const pendientesCobro = $derived(
     d.facturas.filter((f) => f.serie === 'F' && !f.cobro && !f.rectificadaPor).sort((a, b) => a.fechaExpedicion.localeCompare(b.fechaExpedicion)),
@@ -47,16 +48,17 @@
     <button class="boton" onclick={() => ir('ajustes')}>Configurar</button>
   </div>
 {:else}
-  {#if faltaAnterior}
-    <div class="aviso">
-      <strong>Falta la factura de {nombreMes(anterior)}.</strong> Debe emitirse antes del {corta(plazoExpedicion(anterior))}.
-      <button class="boton secundario" style="margin-top:10px" onclick={() => ir(`facturas/nueva?mes=${inicioMes(anterior).slice(0, 7)}`)}>
-        Hacer factura de {MESES[anterior.mes - 1]}
-      </button>
+  {#if siguiente && !antesDelDia}
+    <div class="tarjeta destacada">
+      <div class="titulo">Factura de {nombreMes(siguiente)}</div>
+      {#if estimado}<div class="grande">{euros(estimado.total)}</div>{/if}
+      <div style="font-size:15px;opacity:.85">
+        {#if esMesActual}Toca hacerla el día {diaFactura}{:else}Atrasada: plazo hasta el {corta(plazoExpedicion(siguiente))}{/if}
+        {#if pendientes.length > 1}· después quedan {pendientes.length - 1} {pendientes.length === 2 ? 'mes' : 'meses'} más{/if}
+      </div>
+      <button class="boton" onclick={() => ir(`facturas/nueva?mes=${inicioMes(siguiente).slice(0, 7)}`)}>Hacer la factura</button>
     </div>
-  {/if}
-
-  {#if facturaActual}
+  {:else if facturaActual}
     <button class="tarjeta fila" style="padding:16px" onclick={() => ir(`facturas/${facturaActual.id}`)}>
       <span class="etiqueta">
         <span class="titulo" style="font-size:13px;color:var(--secundario)">{capitalizar(nombreMes(mesActual))}</span>
@@ -65,12 +67,10 @@
       </span>
       <span class="flecha"></span>
     </button>
-  {:else}
-    <div class="tarjeta destacada">
-      <div class="titulo">Factura de {nombreMes(mesActual)}</div>
-      {#if estimado}<div class="grande">{euros(estimado.total)}</div>{/if}
-      <div style="font-size:15px;opacity:.85">Pendiente de emitir · plazo hasta el {corta(plazoExpedicion(mesActual))}</div>
-      <button class="boton" onclick={() => ir(`facturas/nueva?mes=${inicioMes(mesActual).slice(0, 7)}`)}>Hacer la factura</button>
+  {:else if antesDelDia}
+    <div class="tarjeta">
+      <div class="titulo" style="color:var(--secundario)">Factura de {nombreMes(mesActual)}</div>
+      <div style="margin-top:4px">Todo al día. La de este mes toca el día {diaFactura}.</div>
     </div>
   {/if}
 

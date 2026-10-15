@@ -41,6 +41,8 @@ export interface Contrato {
   /** El inquilino es empresa o autónomo y retiene a cuenta del IRPF (art. 100 RIRPF). */
   aplicaRetencion: boolean;
   tipoRetencion: number;
+  /** Día del mes en que se hace la factura (recordatorio y aviso en Inicio). */
+  diaFacturacion: number;
   /** Mes en que se actualiza la renta (IPC u otro índice pactado), o 0 si no hay. */
   mesActualizacion: number;
   fianza: {

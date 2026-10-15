@@ -3,7 +3,8 @@ import { euros, parsear, porcentaje } from '../src/core/dinero';
 import { plazo303, trimestreAPresentar, trimestreDe } from '../src/core/fechas';
 import * as NIF from '../src/core/nif';
 import {
-  borradorMensual, borradorRectificativa, calcular, emitir, fechaDevengo, problemasEmision, siguienteNumero,
+  borradorMensual, borradorRectificativa, calcular, emitir, fechaDevengo, mesAFacturar, mesesPendientes, problemasEmision,
+  reiniciarFacturacion, siguienteNumero,
 } from '../src/core/factura';
 import { liquidacion303, resumenRenta, sentido } from '../src/core/impuestos';
 import { datosVacios, type Contrato, type Datos, type Gasto, type Persona } from '../src/core/modelo';
@@ -15,10 +16,10 @@ const arrendador: Persona = {
 const contrato: Contrato = {
   inquilino: { ...arrendador, nombre: 'Comercial Ejemplo SL', nif: 'B07000003', direccion: 'C/ Comercio 3' },
   inmueble: { direccion: 'Local en C/ Comercio 3, bajos, 07001 Palma', referenciaCatastral: '' },
-  fechaInicio: '2024-01-01',
+  fechaInicio: '2026-10-01',
   renta: 100000,
   conceptosFijos: [{ id: '1', concepto: 'IBI repercutido', importe: 5000 }],
-  tipoIVA: 21, aplicaRetencion: true, tipoRetencion: 19, mesActualizacion: 1,
+  tipoIVA: 21, aplicaRetencion: true, tipoRetencion: 19, diaFacturacion: 8, mesActualizacion: 1,
   fianza: { importe: 200000, fechaDeposito: '', referencia: '' },
   formaPago: 'Transferencia',
 };
@@ -149,5 +150,41 @@ describe('impuestos', () => {
     expect(r.interesesYReparaciones).toBe(20000);
     expect(r.otrosGastos).toBe(60000);
     expect(r.rendimientoNeto).toBe(315000 - 20000 - 60000 - 30000);
+  });
+});
+
+describe('orden de facturación y reinicio', () => {
+  const desdeSeptiembre = (): Datos => ({ ...datos(), contrato: { ...contrato, fechaInicio: '2026-09-01' } });
+
+  it('propone el mes más antiguo sin facturar', () => {
+    const d = desdeSeptiembre();
+    expect(mesesPendientes(d, { anyo: 2026, mes: 10 })).toEqual([{ anyo: 2026, mes: 9 }, { anyo: 2026, mes: 10 }]);
+    expect(mesAFacturar(d, { anyo: 2026, mes: 10 })).toEqual({ anyo: 2026, mes: 9 });
+  });
+
+  it('no deja facturar octubre con septiembre pendiente (el error de uso)', () => {
+    const d = desdeSeptiembre();
+    expect(problemasEmision(d, borradorMensual(d.contrato!, { anyo: 2026, mes: 10 }, '2026-10-08')))
+      .toContain('Antes hay que facturar septiembre de 2026');
+    const sep = emitir(d, borradorMensual(d.contrato!, { anyo: 2026, mes: 9 }, '2026-10-08'), 's', 'x');
+    d.facturas.push(sep);
+    const oct = borradorMensual(d.contrato!, { anyo: 2026, mes: 10 }, '2026-10-08');
+    expect(problemasEmision(d, oct)).toEqual([]);
+    expect(emitir(d, oct, 'o', 'x').codigo).toBe('2026-002');
+    expect(mesAFacturar({ ...d, facturas: [sep, emitir(d, oct, 'o', 'x')] }, { anyo: 2026, mes: 10 })).toEqual({ anyo: 2026, mes: 11 });
+  });
+
+  it('reiniciar borra facturas y numeración pero no las partes ni los gastos', () => {
+    const d = desdeSeptiembre();
+    d.facturas.push(emitir(d, borradorMensual(d.contrato!, { anyo: 2026, mes: 10 }, '2026-10-01'), 'a', 'x'));
+    d.ajustes.numeracionPrevia = { F2026: 1 };
+    d.gastos.push({ id: 'g', fecha: '2026-10-01', categoria: 'ibi', proveedor: '', nifProveedor: '', numeroFactura: '',
+      concepto: '', base: 100, cuotaIVA: 0, ivaDeducible: false, deducibleRenta: true, notas: '' });
+    reiniciarFacturacion(d);
+    expect(d.facturas).toEqual([]);
+    expect(siguienteNumero(d, 'F', 2026)).toBe(1);
+    expect(d.emisor).toEqual(arrendador);
+    expect(d.contrato?.inquilino.nombre).toBe(contrato.inquilino.nombre);
+    expect(d.gastos).toHaveLength(1);
   });
 });

@@ -1,9 +1,9 @@
 <script lang="ts">
   import { euros } from '../core/dinero';
   import {
-    borradorMensual, borradorRectificativa, calcular, codigo, emitir, problemasEmision, siguienteNumero, type Borrador,
+    borradorMensual, borradorRectificativa, calcular, codigo, emitir, mesAFacturar, problemasEmision, siguienteNumero, type Borrador,
   } from '../core/factura';
-  import { capitalizar, corta, finMes, hoy, inicioMes, mesDe, mesSiguiente, nombreMes, partes, type Mes } from '../core/fechas';
+  import { capitalizar, corta, hoy, inicioMes, mesDe, nombreMes, partes, type Mes } from '../core/fechas';
   import { nuevoId, type Factura } from '../core/modelo';
   import { app, cambiar } from '../datos/estado.svelte';
   import Cabecera from '../ui/Cabecera.svelte';
@@ -17,15 +17,10 @@
   const d = app.datos;
   const original: Factura | undefined = rectificarId ? d.facturas.find((f) => f.id === rectificarId) : undefined;
 
-  /** Primer mes sin facturar a partir del último facturado (o el actual). */
+  /** El mes indicado en el enlace o el más antiguo sin facturar desde el inicio del contrato. */
   function mesPropuesto(): Mes {
     const q = ruta.query.get('mes');
-    if (q) return mesDe(`${q}-01`);
-    const facturados = d.facturas.filter((f) => f.serie === 'F' && !f.rectificadaPor).map((f) => f.periodo.desde).sort();
-    const actual = mesDe(hoy());
-    if (!facturados.length) return actual;
-    const siguiente = mesSiguiente(mesDe(facturados[facturados.length - 1]));
-    return inicioMes(siguiente) <= inicioMes(actual) ? siguiente : actual;
+    return q ? mesDe(`${q}-01`) : mesAFacturar(d, mesDe(hoy()));
   }
 
   let mesTexto = $state(inicioMes(mesPropuesto()).slice(0, 7));

@@ -1,5 +1,5 @@
 import { porcentaje, suma } from './dinero';
-import { finMes, inicioMes, nombreMes, partes, type Fecha, type Mes } from './fechas';
+import { finMes, inicioMes, mesDe, mesSiguiente, nombreMes, partes, type Fecha, type Mes } from './fechas';
 import type { Contrato, Datos, Factura, Linea, Persona, Serie, Totales } from './modelo';
 import * as NIF from './nif';
 
@@ -26,6 +26,36 @@ export function siguienteNumero(datos: Datos, serie: Serie, anyo: number): numbe
   const previa = datos.ajustes.numeracionPrevia[`${serie}${anyo}`] ?? 0;
   const ultima = ultimaDeSerie(datos, serie, anyo)?.numero ?? 0;
   return Math.max(previa, ultima) + 1;
+}
+
+// MARK: Meses por facturar
+
+/** Meses desde el inicio del contrato hasta `hasta` (incluido) que no tienen factura vigente, del más antiguo al más reciente. */
+export function mesesPendientes(datos: Datos, hasta: Mes): Mes[] {
+  if (!datos.contrato?.fechaInicio) return [];
+  const facturados = new Set(
+    datos.facturas.filter((f) => f.serie === 'F' && !f.rectificadaPor).map((f) => f.periodo.desde),
+  );
+  const pendientes: Mes[] = [];
+  let m = mesDe(datos.contrato.fechaInicio);
+  for (let i = 0; i < 240 && inicioMes(m) <= inicioMes(hasta); i++, m = mesSiguiente(m)) {
+    if (!facturados.has(inicioMes(m))) pendientes.push(m);
+  }
+  return pendientes;
+}
+
+/** Mes que toca facturar: el más antiguo pendiente o, si está todo al día, el siguiente al último facturado. */
+export function mesAFacturar(datos: Datos, hoy: Mes): Mes {
+  const pendiente = mesesPendientes(datos, hoy)[0];
+  if (pendiente) return pendiente;
+  const ultimo = datos.facturas.filter((f) => f.serie === 'F' && !f.rectificadaPor).map((f) => f.periodo.desde).sort().at(-1);
+  return ultimo ? mesSiguiente(mesDe(ultimo)) : hoy;
+}
+
+/** Empezar de cero la facturación: borra facturas y numeración; conserva partes, contrato, gastos y declaraciones. */
+export function reiniciarFacturacion(datos: Datos): void {
+  datos.facturas = [];
+  datos.ajustes.numeracionPrevia = {};
 }
 
 // MARK: Borrador
@@ -103,6 +133,9 @@ export function problemasEmision(datos: Datos, b: Borrador): string[] {
       (f) => f.serie === 'F' && !f.rectificadaPor && f.periodo.desde === b.periodo.desde && f.lineas.length > 0,
     );
     if (repetida) problemas.push(`Ese mes ya está facturado (${repetida.codigo})`);
+    // Los meses se facturan en orden: así la numeración sigue la cronología de los periodos.
+    const anterior = mesesPendientes(datos, mesDe(b.periodo.desde)).find((m) => inicioMes(m) < b.periodo.desde);
+    if (anterior) problemas.push(`Antes hay que facturar ${nombreMes(anterior)}`);
   }
   return problemas;
 }

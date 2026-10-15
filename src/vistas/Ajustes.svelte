@@ -2,6 +2,7 @@
   import { euros } from '../core/dinero';
   import { corta, diasEntre, hoy, partes } from '../core/fechas';
   import { libroExpedidas, libroRecibidas, recordatorios } from '../core/exportar';
+  import { reiniciarFacturacion } from '../core/factura';
   import { app, cambiar, restaurar } from '../datos/estado.svelte';
   import { compartirArchivo, leerArchivo } from '../datos/compartir';
   import Cabecera from '../ui/Cabecera.svelte';
@@ -17,6 +18,26 @@
   const d = $derived(app.datos);
   const anyo = partes(hoy()).anyo;
   let restaurando = $state<string | null>(null);
+  let reiniciando = $state(false);
+  let confirmacion = $state('');
+
+  /** Reinicio de la facturación: siempre con copia previa; conserva arrendador, contrato y gastos. */
+  async function reiniciar() {
+    const json = JSON.stringify($state.snapshot(app.datos), null, 1);
+    const r = await compartirArchivo(new Blob([json], { type: 'application/json' }), `Alquiler-antes-de-reiniciar-${hoy()}.json`, 'Copia antes de reiniciar');
+    if (r === 'cancelado') {
+      avisar('Reinicio cancelado: no se guardó la copia');
+      return;
+    }
+    await cambiar((x) => {
+      reiniciarFacturacion(x);
+      x.ajustes.ultimaCopia = new Date().toISOString();
+    });
+    reiniciando = false;
+    confirmacion = '';
+    avisar('Facturación reiniciada');
+    ir('', true);
+  }
 
   async function copia() {
     const json = JSON.stringify($state.snapshot(app.datos), null, 1);
@@ -48,7 +69,7 @@
   }
 
   async function calendario() {
-    await compartirArchivo(new Blob([recordatorios(anyo)], { type: 'text/calendar' }), 'Recordatorios-alquiler.ics', 'Recordatorios');
+    await compartirArchivo(new Blob([recordatorios(anyo, app.datos.contrato?.diaFacturacion ?? 1)], { type: 'text/calendar' }), 'Recordatorios-alquiler.ics', 'Recordatorios');
   }
 </script>
 
@@ -74,6 +95,16 @@
     <button class="fila enlace" onclick={elegirCopia}>Restaurar una copia…</button>
   </div>
   <p class="nota">Restaurar sustituye todos los datos actuales por los de la copia.</p>
+
+  <h2>Empezar de cero</h2>
+  <div class="grupo">
+    <button class="fila peligro" onclick={() => (reiniciando = true)}>Reiniciar facturación…</button>
+  </div>
+  <p class="nota">
+    Borra todas las facturas y la numeración ({d.facturas.length} {d.facturas.length === 1 ? 'factura' : 'facturas'} ahora).
+    Conserva el arrendador, el inquilino, el contrato y los gastos. Úsalo solo al empezar, si las primeras facturas se hicieron mal
+    y aún no se ha presentado el IVA. Avisa por escrito al inquilino de que las facturas anteriores quedan anuladas.
+  </p>
 {:else}
   <h1>Ajustes</h1>
   <div class="grupo">
@@ -103,7 +134,7 @@
   <div class="grupo">
     <button class="fila enlace" onclick={calendario}>Añadir recordatorios al Calendario…</button>
   </div>
-  <p class="nota">El día 1 de cada mes para la factura y al principio de cada plazo del IVA.</p>
+  <p class="nota">El día {d.contrato?.diaFacturacion ?? 1} de cada mes para la factura y al principio de cada plazo del IVA.</p>
 
   <h2>Información</h2>
   <div class="grupo">
@@ -114,6 +145,16 @@
     App creada para un uso particular: facturar el alquiler de un local comercial de una persona física a una empresa o autónomo
     en Baleares. Es gratuita y no envía datos a ningún servidor. No sustituye el consejo de un asesor fiscal.
   </p>
+{/if}
+
+{#if reiniciando}
+  <Modal titulo="¿Reiniciar la facturación?" texto="Se guardará una copia de todo y después se borrarán las facturas. Escribe REINICIAR para confirmar." cerrar={() => (reiniciando = false)}>
+    <div class="grupo" style="margin-bottom:16px">
+      <div class="campo"><input bind:value={confirmacion} autocapitalize="characters" autocomplete="off" placeholder="REINICIAR" aria-label="Confirmación" style="text-align:left" /></div>
+    </div>
+    <button class="boton" style="background:var(--peligro)" disabled={confirmacion.trim().toUpperCase() !== 'REINICIAR'} onclick={reiniciar}>Guardar copia y reiniciar</button>
+    <button class="boton secundario" onclick={() => (reiniciando = false)}>Cancelar</button>
+  </Modal>
 {/if}
 
 {#if restaurando}

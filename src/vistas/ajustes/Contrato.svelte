@@ -19,6 +19,7 @@
       tipoIVA: 21,
       aplicaRetencion: true,
       tipoRetencion: 19,
+      diaFacturacion: 1,
       mesActualizacion: 0,
       fianza: { importe: 0, fechaDeposito: '', referencia: '' },
       formaPago: 'Transferencia bancaria a la cuenta ES…',
@@ -80,6 +81,17 @@
   <div class="fila total"><span class="etiqueta">Cobro mensual</span><span class="valor">{euros(base + porcentaje(c.tipoIVA, base) - (c.aplicaRetencion ? porcentaje(c.tipoRetencion, base) : 0))}</span></div>
 </div>
 <p class="nota">El inquilino ingresa la retención en Hacienda (modelo 115) y en la Renta se descuenta de lo que tenga que pagar el propietario.</p>
+
+<h2>Facturación</h2>
+<div class="grupo">
+  <div class="campo">
+    <label for="df">Día de la factura</label>
+    <select id="df" bind:value={c.diaFacturacion}>
+      {#each Array.from({ length: 28 }, (_, i) => i + 1) as dia (dia)}<option value={dia}>día {dia} de cada mes</option>{/each}
+    </select>
+  </div>
+</div>
+<p class="nota">La factura de cada mes se hace ese día, con la fecha real y el periodo del mes. Los meses se facturan en orden desde el inicio del contrato.</p>
 
 <h2>Actualización de la renta</h2>
 <div class="grupo">

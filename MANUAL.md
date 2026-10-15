@@ -30,21 +30,26 @@ En **Ajustes**, con el contrato de alquiler y un recibo del IBI a mano:
     - Renta mensual **sin IVA**.
     - Gastos que paga el inquilino (IBI, comunidad, agua…), solo si el contrato lo dice y se le cobran en la factura.
     - Retención IRPF 19 %: activada si el inquilino es empresa o autónomo.
+    - Día de la factura (por ejemplo, el 8 de cada mes).
     - Mes de actualización de la renta (IPC), fianza y fecha de depósito en el IBAVI, y forma de pago (IBAN).
+    - Fecha de inicio del contrato: la app factura los meses en orden desde esa fecha.
 - **Numeración y Renta:** si este año ya se hicieron facturas por otro medio, indica el número de la última
   para que la app continúe. La amortización anual se copia de la Renta del año anterior.
-- **Recordatorios:** añade al Calendario el aviso del día 1 de cada mes y los plazos del IVA.
+- **Recordatorios:** añade al Calendario el aviso del día de la factura y los plazos del IVA.
 
 ## 3. Cada mes: la factura
 
-1. En **Inicio**, toca **Hacer la factura**.
+El día de la factura, con la fecha real de ese día y el periodo del mes que se cobra.
+
+1. En **Inicio**, toca **Hacer la factura**. La app propone siempre el mes más antiguo sin facturar.
 2. Revisa el mes, la fecha y los conceptos (puedes añadir uno puntual, como una derrama).
 3. Toca **Emitir factura** y confirma.
 4. Toca **Enviar PDF…** y elige Mail o WhatsApp.
 5. Cuando cobres, abre la factura y toca **Marcar como cobrada…**.
 
 El plazo legal para expedir la factura a una empresa es el día 15 del mes siguiente. Si la app no deja emitir,
-un recuadro naranja explica por qué (NIF erróneo, mes ya facturado, fecha anterior a la última factura…).
+un recuadro naranja explica por qué (NIF erróneo, mes ya facturado, un mes anterior sin facturar, fecha anterior a la última factura…).
+Los meses se facturan en orden para que la numeración siga la cronología: no se puede facturar octubre con septiembre pendiente.
 
 ## 4. Corregir una factura
 
@@ -53,6 +58,13 @@ Una factura emitida no se puede modificar ni borrar. Para corregirla:
 1. Abre la factura y toca **Crear factura rectificativa**, con el motivo. Sale con número `R2026-001` y los importes en negativo.
 2. Toca **Hacer la factura correcta de …** y emítela.
 3. Envía las dos al inquilino.
+
+### Empezar de cero
+
+Si las primeras facturas se hicieron mal (por ejemplo, en desorden) y **todavía no se ha presentado ningún IVA**,
+**Ajustes › Copia de seguridad › Reiniciar facturación** borra las facturas y la numeración, conservando el
+arrendador, el inquilino, el contrato y los gastos. Antes guarda una copia de todo. Hay que avisar por escrito al
+inquilino de que las facturas anteriores quedan anuladas y se sustituyen por las nuevas.
 
 ## 5. Gastos del local
 
@@ -91,7 +103,7 @@ En Ajustes también se exportan en CSV los libros registro de facturas emitidas 
 
 | Cuándo | Qué hacer |
 | --- | --- |
-| Día 1 de cada mes | Factura, envío y copia de seguridad |
+| Día de la factura, cada mes | Factura, envío y copia de seguridad |
 | Enero (hasta el 30) | IVA del 4.º trimestre con el apartado anual; certificado de retenciones del inquilino |
 | Abril (hasta el 20) | IVA del 1.er trimestre |
 | Abril a junio | Renta |

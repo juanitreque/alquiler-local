@@ -57,6 +57,7 @@ export function migrar(entrada: unknown): Datos {
     ...d,
     gastos: d.gastos ?? [],
     presentaciones: d.presentaciones ?? [],
+    contrato: d.contrato ? { ...d.contrato, diaFacturacion: d.contrato.diaFacturacion ?? 1 } : null,
     ajustes: { ...base.ajustes, ...d.ajustes },
   } as Datos;
 }

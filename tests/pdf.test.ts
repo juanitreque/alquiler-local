@@ -15,7 +15,7 @@ const d: Datos = {
     inquilino: { ...p, nombre: 'Comercial Ejemplo SL', nif: 'B07000003', direccion: 'C/ Comercio 3' },
     inmueble: { direccion: 'Local comercial en C/ Comercio 3, bajos, 07001 Palma', referenciaCatastral: '1234567DD8912S0001AB' },
     fechaInicio: '2024-01-01', renta: 105000, conceptosFijos: [{ id: '1', concepto: 'IBI repercutido (1/12)', importe: 4550 }],
-    tipoIVA: 21, aplicaRetencion: true, tipoRetencion: 19, mesActualizacion: 1,
+    tipoIVA: 21, aplicaRetencion: true, tipoRetencion: 19, diaFacturacion: 8, mesActualizacion: 1,
     fianza: { importe: 0, fechaDeposito: '', referencia: '' }, formaPago: 'Transferencia bancaria',
   },
 };

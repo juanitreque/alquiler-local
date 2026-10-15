@@ -66,11 +66,11 @@ function evento(uid: string, inicio: Fecha, titulo: string, descripcion: string,
   ].join('\r\n');
 }
 
-/** Factura el día 1 de cada mes y el 303 al principio de cada plazo trimestral. */
-export function recordatorios(anyo: number): string {
+/** Factura el día `diaFactura` de cada mes y el 303 al principio de cada plazo trimestral. */
+export function recordatorios(anyo: number, diaFactura = 1): string {
   const eventos = [
-    evento('factura-mensual', `${anyo}-01-01`, 'Hacer la factura del alquiler',
-      'Abre la app Alquiler y emite la factura del mes.', 'FREQ=MONTHLY;BYMONTHDAY=1'),
+    evento('factura-mensual', `${anyo}-01-${String(diaFactura).padStart(2, '0')}`, 'Hacer la factura del alquiler',
+      'Abre la app Alquiler y emite la factura del mes.', `FREQ=MONTHLY;BYMONTHDAY=${diaFactura}`),
     ...[
       { mes: 4, t: '1T' }, { mes: 7, t: '2T' }, { mes: 10, t: '3T' },
     ].map(({ mes, t }) =>
